@@ -15,7 +15,7 @@ export const API_BASE = (rawApiBase ?? '').trim().replace(/\/+$/, '');
  * 部署时可用环境变量覆盖：VITE_GATE_HASH=<sha256 hex> npm run build
  */
 export const GATE_HASH = (import.meta.env.VITE_GATE_HASH as string | undefined)?.trim()
-  || 'b9911178a4c28999979295a90819e36053b2cac2fdb98f2bf5257d09d59e3ef1';
+  || '2926a2731f4b312c08982cacf8061eb14bf65c1a87cc5d70e864e079c6220731';
 export const GATE_ENABLED = GATE_HASH.length > 0;
 /** 通过后写入 localStorage 的标记 key */
 export const GATE_KEY = 'life-sim-gate-passed';
