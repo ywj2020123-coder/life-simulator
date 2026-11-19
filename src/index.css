@@ -1,0 +1,103 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Microsoft YaHei', 'PingFang SC', -apple-system, sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* 粒子漂浮 */
+@keyframes float {
+  0% {
+    transform: translateY(0) translateX(0) scale(1);
+    opacity: 0;
+  }
+  10% { opacity: 0.5; }
+  90% { opacity: 0.5; }
+  100% {
+    transform: translateY(-100vh) translateX(30px) scale(0.3);
+    opacity: 0;
+  }
+}
+
+/* 淡入动画 */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 场景动画 */
+@keyframes twinkle {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+@keyframes glow {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.7; }
+}
+@keyframes neon {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.7; }
+}
+@keyframes infantMobile {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 氛围光漂移（电影感柔光） */
+@keyframes drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(5%, 4%) scale(1.06); }
+}
+@keyframes driftSlow {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-5%, -4%) scale(1.08); }
+}
+/* 漂浮光尘 */
+@keyframes mote {
+  0% { opacity: 0; transform: translateY(0); }
+  15% { opacity: 0.5; }
+  85% { opacity: 0.12; }
+  100% { opacity: 0; transform: translateY(-90px); }
+}
+/* 稀有天赋高光（选中瞬间外扩光晕） */
+@keyframes talentFlash {
+  0% { box-shadow: 0 0 0 0 rgba(232,160,93,0.85); }
+  100% { box-shadow: 0 0 30px 10px rgba(232,160,93,0); }
+}
+/* 人物轻摇（以脚底为轴的呼吸感，幅度克制不打扰阅读） */
+@keyframes sway {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(1.6deg); }
+}
+
+.animate-twinkle { animation: twinkle 3s ease-in-out infinite; }
+.animate-glow { animation: glow 2s ease-in-out infinite; }
+.animate-neon { animation: neon 3s ease-in-out infinite; }
+.animate-infant-mobile { animation: infantMobile 12s linear infinite; transform-origin: 480px 180px; }
+.animate-drift { animation: drift 20s ease-in-out infinite; }
+.animate-drift-slow { animation: driftSlow 30s ease-in-out infinite; }
+.animate-mote { animation: mote 12s ease-in-out infinite; }
+.animate-talent-flash { animation: talentFlash 0.9s ease-out; }
+.animate-sway { animation: sway 4.5s ease-in-out infinite; transform-origin: 50% 100%; }
+
+/* 滚动条 */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.06); border-radius: 2px; }

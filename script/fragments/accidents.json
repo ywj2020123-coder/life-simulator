@@ -1,0 +1,44 @@
+[
+  {
+    "id": "mid_0052",
+    "age_range": [
+      52,
+      52
+    ],
+    "category": "family",
+    "title": "家里的变故",
+    "text": "半夜的电话总没有好事。家人突然病倒，需要一笔不小的治疗费。你连夜赶到医院，在缴费窗口前，看着屏幕上的数字，第一次体会到什么叫「钱到用时方恨少」。走廊里的灯亮了一整夜，你也坐了一整夜。",
+    "choices": [
+      {
+        "text": "动用积蓄，全力治疗",
+        "effects": {
+          "money": -18,
+          "responsibility": 5
+        },
+        "flags_add": []
+      },
+      {
+        "text": "借钱也要治，不留遗憾",
+        "effects": {
+          "money": -20,
+          "happiness": -3
+        },
+        "flags_add": []
+      },
+      {
+        "text": "量力而行，选择保守治疗",
+        "effects": {
+          "money": -10,
+          "responsibility": -5
+        },
+        "flags_add": []
+      }
+    ],
+    "conditions": {
+      "has_flags": [],
+      "not_flags": [],
+      "min_attrs": {},
+      "max_attrs": {}
+    }
+  }
+]

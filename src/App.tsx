@@ -1,0 +1,152 @@
+import { useCallback, useEffect, useState } from 'react';
+import { useGame } from './hooks/useGame';
+import { sfx, setMuted } from './utils/sound';
+import TitleScreen from './components/TitleScreen';
+import GameScreen from './components/GameScreen';
+import SummaryScreen from './components/SummaryScreen';
+import InstallPrompt from './components/InstallPrompt';
+import GateScreen from './components/GateScreen';
+import { GATE_ENABLED, GATE_KEY } from './config';
+import { loadInheritTalent } from './engine/talents';
+import { parseChallengeLink, type ChallengeLink } from './utils/share';
+
+/** 主题（全局）：深空蓝（默认）/ 纯黑 */
+export type Theme = 'dark' | 'black';
+
+/** 主题存储 key */
+const THEME_KEY = 'life-sim-theme';
+
+/** 读取主题；存储不可用时回退深空蓝 */
+function loadTheme(): Theme {
+  try {
+    return localStorage.getItem(THEME_KEY) === 'black' ? 'black' : 'dark';
+  } catch {
+    return 'dark';
+  }
+}
+
+export default function App() {
+  const { game, currentEvent, feedback, skippedEvents, autoPlay, introAuto, typeSpeed, saves, achievements, stats, newAchievements, fateEventIds, isDaily, isWeekly, seedChallenge, weeklyGoal, daily, dailyHistory, dailyStreak, weekly, seedScores, family, shuffleSeed, fastForwardUntil, startGame, startAutoGame, startDailyGame, startWeeklyGame, restart, reincarnate, makeChoice, makeAction, skipIntro, fastForwardTo, undo, undoToAge, undoStack, continue: continue_, continueGame, selectSlot, reset, resetFamily, setTypeSpeed } = useGame();
+
+  // 主动行动：选择活动后触发引擎 MAKE_ACTION（结果由反馈页展示；不推进年龄、不进 history）
+  const handleAction = useCallback((activityId: string) => {
+    makeAction(activityId);
+  }, [makeAction]);
+
+  // 主题切换（纯黑/深空蓝；持久化到 localStorage）
+  const [theme, setTheme] = useState<Theme>(loadTheme);
+  const toggleTheme = () => {
+    sfx.select();
+    const next = theme === 'dark' ? 'black' : 'dark';
+    setTheme(next);
+    try {
+      localStorage.setItem(THEME_KEY, next);
+    } catch {
+      // 存储不可用静默降级
+    }
+  };
+
+  // 群密码访问门：未启用或已通过（localStorage 标记）时直接进游戏
+  const [gatePassed, setGatePassed] = useState<boolean>(() => {
+    if (!GATE_ENABLED) return true;
+    try {
+      return localStorage.getItem(GATE_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
+
+  // 深链载入的种子挑战载荷（?seed&from&score&age&title；仅挂载时读取一次，刷新后 URL 仍可恢复）
+  const [challenge] = useState<ChallengeLink | null>(() => parseChallengeLink(window.location.search));
+  // 结算页对决目标：仅当本局确为「该种子的种子挑战」时展示（普通随机局不会命中同一种子）
+  const duelTarget = seedChallenge && challenge && challenge.seed === shuffleSeed ? challenge : undefined;
+  // 快进仅对普通手动局开放（快速模拟/每日/每周/种子挑战为保证公平不开放）
+  const canFastForward = !autoPlay && !isDaily && !isWeekly && !seedChallenge;
+
+  // 快速模拟模式静音高频交互音；结算页恢复（保留落幕音）
+  useEffect(() => {
+    setMuted(autoPlay && game.phase !== 'summary');
+  }, [autoPlay, game.phase]);
+
+  // 进入结算页播放落幕音
+  useEffect(() => {
+    if (game.phase === 'summary') {
+      sfx.death();
+    }
+  }, [game.phase]);
+
+  // 结算页新成就解锁音
+  useEffect(() => {
+    if (game.phase === 'summary' && newAchievements.length > 0) {
+      sfx.achievement();
+    }
+  }, [game.phase, newAchievements.length]);
+
+  return (
+    // 全屏径向渐变背景（主题可切换：深空蓝 / 纯黑）；三个阶段均为全屏流式布局（无舞台框/缩放），窄屏由各自组件响应式适配
+    <div className={`w-screen h-screen flex justify-center items-center overflow-hidden ${theme === 'dark'
+      ? 'bg-[radial-gradient(ellipse_at_center,#1a1a30_0%,#0a0a14_70%)]'
+      : 'bg-[radial-gradient(ellipse_at_center,#1a1a1a_0%,#000000_70%)]'}`}>
+      {gatePassed ? (
+        <div className="w-full h-full text-white">
+          {game.phase === 'title' && (
+          <>
+            <TitleScreen onStart={startGame} onAutoStart={startAutoGame} onDailyStart={(name) => startDailyGame(name)} onWeeklyStart={(name) => startWeeklyGame(name)} saves={saves} onContinue={continueGame} onSelectSlot={selectSlot} achievements={achievements} stats={stats} daily={daily} dailyHistory={dailyHistory} dailyStreak={dailyStreak} weekly={weekly} weeklyGoal={weeklyGoal} seedScores={seedScores} family={family} theme={theme} onToggleTheme={toggleTheme} onResetFamily={resetFamily} challengeLink={challenge} />
+            {/* PWA 安装引导（仅标题页；Android/Chrome 系首次访问展示一次） */}
+            <InstallPrompt />
+          </>
+        )}
+        {game.phase === 'playing' && (
+          <GameScreen
+            game={game}
+            currentEvent={currentEvent}
+            feedback={feedback}
+            autoPlay={autoPlay}
+            typeSpeed={typeSpeed}
+            fateEventIds={fateEventIds}
+            isWeekly={isWeekly}
+            weeklyGoal={weeklyGoal}
+            undoStack={undoStack}
+            onUndo={undo}
+            onUndoToAge={undoToAge}
+            onTypeSpeedChange={setTypeSpeed}
+            onChoice={makeChoice}
+            onContinue={continue_}
+            onExit={reset}
+            onRestart={restart}
+            onAction={handleAction}
+            actionsDone={game.actionsDone ?? []}
+            introAuto={introAuto}
+            onSkipIntro={skipIntro}
+            fastForwardUntil={fastForwardUntil}
+            canFastForward={canFastForward}
+            onFastForward={fastForwardTo}
+          />
+        )}
+        {game.phase === 'summary' && (
+          <SummaryScreen
+            game={game}
+            onRestart={reset}
+            newAchievements={newAchievements}
+            skippedTitles={[...new Set(skippedEvents.map(e => e.title ?? e.id))]}
+            generation={family.length > 0 ? family[family.length - 1].generation : null}
+            seed={shuffleSeed}
+            collectedEndings={Object.keys(stats.endings)}
+            isDaily={isDaily}
+            isWeekly={isWeekly}
+            isSeedChallenge={seedChallenge}
+            isAuto={autoPlay}
+            weeklyGoal={weeklyGoal}
+            duelTarget={duelTarget}
+            totalLives={stats.totalLives}
+            onReincarnate={reincarnate}
+            inheritTalent={loadInheritTalent()}
+          />
+        )}
+        </div>
+      ) : (
+        <GateScreen onPass={() => setGatePassed(true)} />
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,88 @@
+[
+  {
+    "id": "young_0024",
+    "age_range": [
+      27,
+      27
+    ],
+    "category": "career",
+    "title": "当年的对手",
+    "text": "入职培训的名单上，你看见了一个熟悉的名字——小学时每次考试都跟你咬得很紧的那个人。会议室里四目相对，你们都愣了一下，然后笑了。当年在成绩单上较劲的小孩，如今在同一间办公室里，重新站在了同一条起跑线上。",
+    "choices": [
+      {
+        "text": "主动打招呼，聊聊这些年的经历",
+        "effects": {
+          "social": 4,
+          "happiness": 2
+        },
+        "flags_add": []
+      },
+      {
+        "text": "暗中较劲，争取表现得更好",
+        "effects": {
+          "intelligence": 3,
+          "pressure": 3
+        },
+        "flags_add": []
+      },
+      {
+        "text": "点头示意，保持距离",
+        "effects": {
+          "social": -1
+        },
+        "flags_add": []
+      }
+    ],
+    "conditions": {
+      "has_flags": [
+        "rivalry"
+      ],
+      "not_flags": [],
+      "min_attrs": {},
+      "max_attrs": {}
+    }
+  },
+  {
+    "id": "adult_0042",
+    "age_range": [
+      42,
+      42
+    ],
+    "category": "personality",
+    "title": "重读启蒙书",
+    "text": "整理书架时，你翻出一本封面都磨白了的旧书——那是你人生第一本认真读完的课外书，书页里还夹着当年画的歪扭插图。你坐在沙发上重读了几页，文字早就烂熟于心，可读到某一段时，你还是停了下来。原来这些年走过的路，都和这一页页纸有关。",
+    "choices": [
+      {
+        "text": "读完它，再买一本新的送给孩子",
+        "effects": {
+          "happiness": 2,
+          "empathy": 4
+        },
+        "flags_add": []
+      },
+      {
+        "text": "重新拿起阅读的习惯",
+        "effects": {
+          "intelligence": 3,
+          "happiness": 2
+        },
+        "flags_add": []
+      },
+      {
+        "text": "放回书架，忙完这阵再说",
+        "effects": {
+          "happiness": 1
+        },
+        "flags_add": []
+      }
+    ],
+    "conditions": {
+      "has_flags": [
+        "book_reader"
+      ],
+      "not_flags": [],
+      "min_attrs": {},
+      "max_attrs": {}
+    }
+  }
+]

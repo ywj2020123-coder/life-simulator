@@ -1,0 +1,298 @@
+[
+  {
+    "id": "egg2_0003",
+    "age_range": [
+      54,
+      54
+    ],
+    "category": "friend",
+    "title": "广场舞音量被投诉",
+    "text": "广场舞音响刚调到「震天响」档，居委会王大姐就带着分贝仪上门了：「居民投诉，超了 15 分贝。」你摆出队长架势据理力争，最后双方各退一步——音量降三格，排练时间延长半小时。你赢了，好像又没完全赢。",
+    "choices": [
+      {
+        "text": "带头谈新方案——舞要跳，觉也要让人睡",
+        "effects": {
+          "communication": 5,
+          "empathy": 3
+        },
+        "flags_add": []
+      },
+      {
+        "text": "换上耳机式音响——科技改变广场舞",
+        "effects": {
+          "technology": 5,
+          "happiness": 3
+        },
+        "flags_add": []
+      },
+      {
+        "text": "悻悻收兵，把排练改到清晨时段",
+        "effects": {
+          "patience": 5,
+          "health": 3
+        },
+        "flags_add": []
+      }
+    ],
+    "conditions": {
+      "has_flags": [],
+      "not_flags": [],
+      "min_attrs": {},
+      "max_attrs": {}
+    }
+  },
+  {
+    "id": "egg2_0004",
+    "age_range": [
+      55,
+      55
+    ],
+    "category": "friend",
+    "title": "老同学炫富凡尔赛",
+    "text": "老同学群里有人连发九宫格：新提的豪车、海景房、限量表，配文「低调庆祝，别声张」。你翻翻自己相册——阳台多肉、炖糊的红烧肉、孩子的奖状。你默默划走，又忍不住点回去，「羡慕」两个字删了又写，写了又删。",
+    "choices": [
+      {
+        "text": "回一句「稳了」，配三个抱拳表情",
+        "effects": {
+          "fun": 5,
+          "social": 3
+        },
+        "flags_add": []
+      },
+      {
+        "text": "发上多肉九宫格——我的不动产，三十盆起步",
+        "effects": {
+          "fun": 4,
+          "happiness": 3
+        },
+        "flags_add": []
+      },
+      {
+        "text": "不理会，给自己倒杯茶——岁月静好",
+        "effects": {
+          "patience": 5,
+          "stability": 3
+        },
+        "flags_add": []
+      }
+    ],
+    "conditions": {
+      "has_flags": [],
+      "not_flags": [],
+      "min_attrs": {},
+      "max_attrs": {}
+    }
+  },
+  {
+    "id": "egg2_0005",
+    "age_range": [
+      57,
+      57
+    ],
+    "category": "health",
+    "title": "体检报告拿错",
+    "text": "体检报告到手，箭头红得刺眼。你腿一软，在走廊长椅坐了半天，连怎么跟家里说都想好了。护士喊号：「28 号——哎，这是 26 号的！」交换报告，一页箭头都没有的才是你的。你俩相视大笑，笑到护士以为你们受了刺激。",
+    "choices": [
+      {
+        "text": "当场大笑三声——虚惊一场是最好的体检结果",
+        "effects": {
+          "happiness": 6,
+          "health": 3
+        },
+        "flags_add": []
+      },
+      {
+        "text": "拉着对方合个影——患难之交，此生难忘",
+        "effects": {
+          "social": 5,
+          "friendship": 3
+        },
+        "flags_add": []
+      },
+      {
+        "text": "回家路上买袋水果奖励自己——压压惊",
+        "effects": {
+          "happiness": 4,
+          "health": 3
+        },
+        "flags_add": []
+      }
+    ],
+    "conditions": {
+      "has_flags": [],
+      "not_flags": [],
+      "min_attrs": {},
+      "max_attrs": {}
+    }
+  },
+  {
+    "id": "egg2_0007",
+    "age_range": [
+      23,
+      23
+    ],
+    "category": "technology",
+    "title": "手机自动更新",
+    "text": "客户电话打进来的前一秒，手机开始自动更新——进度条以每三分钟 1% 的速度龟速爬行。你举着手机满办公室转圈找信号。40 分钟后更新完成，它只修复了一个你从没遇到过的 bug，还多了个你用不上的新功能。",
+    "choices": [
+      {
+        "text": "给客服留言：请加一个「等我打完电话再更新」按钮",
+        "effects": {
+          "communication": 4,
+          "technology": 3
+        },
+        "flags_add": []
+      },
+      {
+        "text": "更新完立刻检查所有软件——一朝被蛇咬",
+        "effects": {
+          "focus": 4,
+          "caution": 3
+        },
+        "flags_add": []
+      },
+      {
+        "text": "认命：反正救不回来了，先干别的",
+        "effects": {
+          "patience": 5,
+          "efficiency": 2
+        },
+        "flags_add": []
+      }
+    ],
+    "conditions": {
+      "has_flags": [],
+      "not_flags": [],
+      "min_attrs": {},
+      "max_attrs": {}
+    }
+  },
+  {
+    "id": "egg2_0009",
+    "age_range": [
+      27,
+      27
+    ],
+    "category": "technology",
+    "title": "快递柜超时费",
+    "text": "快递柜弹出提示：包裹超时，需付 0.5 元。你站在柜前陷入内心斗争：取吧，五毛白交了；不取吧，三袋螺蛳粉等不起。算了五分钟账，你用「反正不差这五毛」说服自己扫码取件——然后发现快递员其实放错了柜子。",
+    "choices": [
+      {
+        "text": "付钱取件，回家嗦螺蛳粉——真香",
+        "effects": {
+          "happiness": 4,
+          "fun": 3
+        },
+        "flags_add": []
+      },
+      {
+        "text": "打电话理论：放错柜子凭什么我付费",
+        "effects": {
+          "communication": 4,
+          "courage": 3
+        },
+        "flags_add": []
+      },
+      {
+        "text": "下次一律寄公司地址，从根源上解决",
+        "effects": {
+          "planning": 5,
+          "efficiency": 3
+        },
+        "flags_add": []
+      }
+    ],
+    "conditions": {
+      "has_flags": [],
+      "not_flags": [],
+      "min_attrs": {},
+      "max_attrs": {}
+    }
+  },
+  {
+    "id": "egg2_0010",
+    "age_range": [
+      58,
+      58
+    ],
+    "category": "friend",
+    "title": "名字被念错",
+    "text": "老同学聚会上，主持人热情洋溢：「欢迎我们的老同学——王大力！」全场安静了一秒，爆发出哄笑。你举杯不慌不忙：「是王大力没错，只是我把「大」字藏了几十年。」主持人的脸红了又绿，你俩碰了个杯，满场大笑。",
+    "choices": [
+      {
+        "text": "即兴接梗，把气氛圆回来",
+        "effects": {
+          "fun": 5,
+          "social": 4
+        },
+        "flags_add": []
+      },
+      {
+        "text": "纠正完名字，顺势聊起当年的绰号",
+        "effects": {
+          "social": 5,
+          "friendship": 3
+        },
+        "flags_add": []
+      },
+      {
+        "text": "笑一笑坐下，深藏功与名",
+        "effects": {
+          "patience": 5,
+          "happiness": 3
+        },
+        "flags_add": []
+      }
+    ],
+    "conditions": {
+      "has_flags": [],
+      "not_flags": [],
+      "min_attrs": {},
+      "max_attrs": {}
+    }
+  },
+  {
+    "id": "egg2_0012",
+    "age_range": [
+      29,
+      29
+    ],
+    "category": "technology",
+    "title": "人红是非多",
+    "text": "爆款带来流量，也带来杠精。评论区两拨人吵得不可开交，从你的观点吵到你的长相。你刷了一夜评论，越看越精神：有人骂你炒作，有人夸你真实，还有人正在考古你三年前的黑历史。你握着手机，像握着一颗烫手山芋。",
+    "choices": [
+      {
+        "text": "亲自下场对线——输人不输阵",
+        "effects": {
+          "courage": 5,
+          "competition": 4
+        },
+        "flags_add": []
+      },
+      {
+        "text": "把杠精拉黑清场——我的评论区我做主",
+        "effects": {
+          "patience": 4,
+          "emotion_control": 3
+        },
+        "flags_add": []
+      },
+      {
+        "text": "关掉评论区专心做内容——眼不见心不烦",
+        "effects": {
+          "focus": 5,
+          "stability": 3
+        },
+        "flags_add": []
+      }
+    ],
+    "conditions": {
+      "has_flags": [
+        "viral"
+      ],
+      "not_flags": [],
+      "min_attrs": {},
+      "max_attrs": {}
+    }
+  }
+]

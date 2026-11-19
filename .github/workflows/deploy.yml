@@ -1,0 +1,49 @@
+# GitHub Pages 自动部署：push 到 master 或手动触发时构建并发布 dist/
+# 首次使用需在仓库 Settings → Pages → Source 选择「GitHub Actions」
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 同一时间只跑一个部署（新 push 取消进行中的旧部署）
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # 事件数据 public/events.json 已入库，无需重新生成
+      # 引擎/数据工具测试（node:test）+ UI 测试（vitest）：回归防线，失败即中止部署
+      - run: npm test
+      - run: npx vitest run
+      - run: npm run build
+        env:
+          VITE_API_BASE: ${{ vars.VITE_API_BASE || secrets.VITE_API_BASE }}
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

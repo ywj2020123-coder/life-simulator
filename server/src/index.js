@@ -1,0 +1,451 @@
+/**
+ * 人生模拟器匿名排行榜 Worker。
+ *
+ * 免费档约束下刻意保持简单：
+ * - 单 KV namespace 承载榜单与限流计数；
+ * - 榜单只保留 top N，降低读放大和单 key 体积；
+ * - 匿名 deviceId 只做去重与限流，不收集任何个人信息；
+ * - 榜单公开数据不包含 deviceId。
+ */
+
+const TOP_N = 100;
+const SCORE_MAX_BYTES = 64 * 1024;
+const DEVICE_RATE_LIMIT_MAX = 20;
+const IP_RATE_LIMIT_MAX = 60;
+const RATE_LIMIT_WINDOW_SECONDS = 60;
+
+const VALID_MODES = new Set(['daily', 'weekly', 'seed', 'auto']);
+const DEVICE_ID_RE = /^[A-Za-z0-9._-]{8,128}$/;
+const ATTR_KEYS = ['health', 'intelligence', 'wealth', 'happiness', 'social', 'appearance', 'luck', 'morality'];
+const DEATH_CAUSES = new Set(['health', 'lifespan', 'accident', 'illness', 'overwork']);
+
+// 16 条路线结局 key + 5 个分数档 key，与前端 src/engine/verdict.ts 对齐。
+const ENDING_KEYS = new Set([
+  'startup_success',
+  'world_traveler',
+  'grad_school',
+  'top_university',
+  'retake',
+  'doctor',
+  'military_flag',
+  'athlete_pro',
+  'artist',
+  'tech_career',
+  'escaped',
+  'gang_boss',
+  'jailed',
+  'went_to_college',
+  'skilled_worker',
+  'civil_servant',
+  'score:75+',
+  'score:60+',
+  'score:45+',
+  'score:30+',
+  'score:low',
+]);
+
+function json(data, status = 200, extraHeaders = {}) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-store',
+      ...extraHeaders,
+    },
+  });
+}
+
+function text(message, status = 400) {
+  return new Response(message, {
+    status,
+    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+  });
+}
+
+function getAllowedOrigins(env) {
+  const raw = typeof env.CORS_ORIGINS === 'string' ? env.CORS_ORIGINS : '';
+  const fallback = 'https://999bug.github.io,http://localhost:5173';
+  return (raw || fallback)
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
+function corsHeaders(request, env) {
+  const origin = request.headers.get('Origin');
+  if (!origin) {
+    return {};
+  }
+  if (!getAllowedOrigins(env).includes(origin)) {
+    return {};
+  }
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Vary': 'Origin',
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Max-Age': '86400',
+  };
+}
+
+function isAllowedWriteOrigin(request, env) {
+  const origin = request.headers.get('Origin');
+  return Boolean(origin) && getAllowedOrigins(env).includes(origin);
+}
+
+function isPlainObject(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function clampInt(value, min, max) {
+  return Math.min(max, Math.max(min, Math.round(value)));
+}
+
+function getClientIp(request) {
+  const connectingIp = request.headers.get('CF-Connecting-IP');
+  if (connectingIp) {
+    return connectingIp.slice(0, 64);
+  }
+  const forwarded = request.headers.get('X-Forwarded-For');
+  if (forwarded) {
+    return forwarded.split(',')[0].trim().slice(0, 64) || 'unknown';
+  }
+  return 'unknown';
+}
+
+async function readJsonBody(request, maxBytes) {
+  const raw = await request.text();
+  if (new TextEncoder().encode(raw).byteLength > maxBytes) {
+    return { error: '请求体过大', status: 413 };
+  }
+  try {
+    return { data: JSON.parse(raw) };
+  } catch {
+    return { error: 'body 必须是合法 JSON', status: 400 };
+  }
+}
+
+function hasJsonContentType(request) {
+  const contentType = request.headers.get('Content-Type') ?? '';
+  return contentType.split(';')[0].trim().toLowerCase() === 'application/json';
+}
+
+function isValidDeviceId(value) {
+  return typeof value === 'string' && DEVICE_ID_RE.test(value);
+}
+
+function normalizeName(value) {
+  if (typeof value !== 'string') {
+    return '无名玩家';
+  }
+  const cleaned = value
+    .replace(/[\u0000-\u001F\u007F]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 24);
+  return cleaned || '无名玩家';
+}
+
+function sanitizeSummary(value) {
+  if (!isPlainObject(value)) {
+    return null;
+  }
+  if (value.gender !== 'male' && value.gender !== 'female') {
+    return null;
+  }
+  if (!isPlainObject(value.attributes)) {
+    return null;
+  }
+  const attributes = {};
+  for (const key of ATTR_KEYS) {
+    const attrValue = value.attributes[key];
+    if (typeof attrValue !== 'number' || !Number.isFinite(attrValue)) {
+      return null;
+    }
+    attributes[key] = clampInt(attrValue, 0, 100);
+  }
+
+  const snapshots = value.snapshots;
+  if (!Array.isArray(snapshots) || snapshots.length > 104) {
+    return null;
+  }
+  const safeSnapshots = [];
+  for (const snapshot of snapshots) {
+    if (!isPlainObject(snapshot) || !isPlainObject(snapshot.attrs)) {
+      return null;
+    }
+    if (typeof snapshot.age !== 'number' || !Number.isFinite(snapshot.age)) {
+      return null;
+    }
+    const attrs = {};
+    for (const key of ATTR_KEYS) {
+      const attrValue = snapshot.attrs[key];
+      if (typeof attrValue !== 'number' || !Number.isFinite(attrValue)) {
+        return null;
+      }
+      attrs[key] = clampInt(attrValue, 0, 100);
+    }
+    safeSnapshots.push({ age: clampInt(snapshot.age, 0, 103), attrs });
+  }
+
+  let deathCause = null;
+  if (value.deathCause != null) {
+    if (typeof value.deathCause !== 'string' || !DEATH_CAUSES.has(value.deathCause)) {
+      return null;
+    }
+    deathCause = value.deathCause;
+  }
+
+  return {
+    gender: value.gender,
+    attributes,
+    snapshots: safeSnapshots,
+    deathCause,
+  };
+}
+
+function isValidKey(mode, key) {
+  if (typeof key !== 'string' || key.length > 64) {
+    return false;
+  }
+  if (mode === 'daily') {
+    return /^\d{8}$/.test(key);
+  }
+  if (mode === 'weekly') {
+    return /^\d{4}-W\d{2}$/.test(key);
+  }
+  if (mode === 'seed') {
+    return /^\d{1,10}$/.test(key);
+  }
+  if (mode === 'auto') {
+    return key === 'global' || /^\d{8}$/.test(key);
+  }
+  return false;
+}
+
+function leaderboardKey(mode, key) {
+  return `lb:${mode}:${key}`;
+}
+
+async function readJson(env, key) {
+  const raw = await env.LEADERBOARD.get(key);
+  if (!raw) {
+    return null;
+  }
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+async function readLeaderboard(env, mode, key) {
+  const value = await readJson(env, leaderboardKey(mode, key));
+  return Array.isArray(value) ? value : [];
+}
+
+async function writeLeaderboard(env, mode, key, entries) {
+  await env.LEADERBOARD.put(leaderboardKey(mode, key), JSON.stringify(entries));
+}
+
+function rankInfo(entries, deviceId) {
+  const index = entries.findIndex((entry) => entry.deviceId === deviceId);
+  if (index < 0) {
+    return { myRank: null, myPercentile: null, total: entries.length };
+  }
+  const myRank = index + 1;
+  const total = entries.length;
+  return {
+    myRank,
+    myPercentile: total > 0 ? Math.round((myRank / total) * 100) : null,
+    total,
+  };
+}
+
+async function enforceRateLimit(env, scope, max) {
+  const windowKey = `rl:${scope}:${Math.floor(Date.now() / (RATE_LIMIT_WINDOW_SECONDS * 1000))}`;
+  const currentRaw = await env.LEADERBOARD.get(windowKey);
+  const current = currentRaw ? Number.parseInt(currentRaw, 10) || 0 : 0;
+  if (current >= max) {
+    return false;
+  }
+  await env.LEADERBOARD.put(windowKey, String(current + 1), {
+    expirationTtl: RATE_LIMIT_WINDOW_SECONDS * 2,
+  });
+  return true;
+}
+
+async function handleScore(request, env) {
+  if (!hasJsonContentType(request)) {
+    return json({ error: 'Content-Type 必须是 application/json' }, 415);
+  }
+  if (!isAllowedWriteOrigin(request, env)) {
+    return json({ error: '请求来源不被允许' }, 403);
+  }
+
+  const parsed = await readJsonBody(request, SCORE_MAX_BYTES);
+  if (parsed.error) {
+    return json({ error: parsed.error }, parsed.status);
+  }
+  const body = parsed.data;
+
+  if (!isPlainObject(body)) {
+    return json({ error: 'body 必须是 JSON 对象' }, 400);
+  }
+
+  const { mode, key, deviceId } = body;
+  if (!VALID_MODES.has(mode)) {
+    return json({ error: 'mode 必须是 daily、weekly 或 seed' }, 400);
+  }
+  if (!isValidKey(mode, key)) {
+    return json({ error: 'key 格式不合法' }, 400);
+  }
+  if (!isValidDeviceId(deviceId)) {
+    return json({ error: 'deviceId 格式不合法' }, 400);
+  }
+  if (typeof body.score !== 'number' || !Number.isFinite(body.score)) {
+    return json({ error: 'score 必须是数字' }, 400);
+  }
+  if (typeof body.age !== 'number' || !Number.isFinite(body.age)) {
+    return json({ error: 'age 必须是数字' }, 400);
+  }
+  if (typeof body.endingKey !== 'string' || !ENDING_KEYS.has(body.endingKey)) {
+    return json({ error: 'endingKey 不在白名单内' }, 400);
+  }
+
+  const name = normalizeName(body.name);
+  let summary = null;
+  if (body.summary !== undefined) {
+    summary = sanitizeSummary(body.summary);
+    if (!summary) {
+      return json({ error: 'summary 格式不合法' }, 400);
+    }
+  }
+
+  const deviceOk = await enforceRateLimit(env, `device:${deviceId}`, DEVICE_RATE_LIMIT_MAX);
+  const ipOk = await enforceRateLimit(env, `ip:${getClientIp(request)}`, IP_RATE_LIMIT_MAX);
+  if (!deviceOk || !ipOk) {
+    return json({ error: '请求过于频繁，请稍后再试' }, 429);
+  }
+
+  const score = clampInt(body.score, 0, 100);
+  const age = clampInt(body.age, 0, 103);
+  const incoming = {
+    deviceId,
+    name,
+    score,
+    age,
+    endingKey: body.endingKey,
+    summary,
+    ts: Date.now(),
+  };
+
+  const entries = await readLeaderboard(env, mode, key);
+  const existingIndex = entries.findIndex((entry) => entry.deviceId === deviceId);
+  let accepted = false;
+  let changed = false;
+
+  if (existingIndex >= 0) {
+    if (entries[existingIndex].score >= incoming.score) {
+      // 同一设备只保留最高分；即使分数没刷新，也允许更新昵称。
+      if (entries[existingIndex].name !== incoming.name) {
+        entries[existingIndex].name = incoming.name;
+        changed = true;
+      }
+    } else {
+      entries.splice(existingIndex, 1);
+      entries.push(incoming);
+      accepted = true;
+      changed = true;
+    }
+  } else {
+    entries.push(incoming);
+    accepted = true;
+    changed = true;
+  }
+
+  entries.sort((a, b) => b.score - a.score);
+  const trimmed = entries.slice(0, TOP_N);
+  if (changed) {
+    await writeLeaderboard(env, mode, key, trimmed);
+  }
+
+  return json({
+    accepted,
+    ...rankInfo(trimmed, deviceId),
+  });
+}
+
+async function handleLeaderboard(request, env) {
+  const url = new URL(request.url);
+  const mode = url.searchParams.get('mode');
+  const key = url.searchParams.get('key');
+  const deviceId = url.searchParams.get('deviceId');
+
+  if (!VALID_MODES.has(mode)) {
+    return json({ error: 'mode 必须是 daily、weekly 或 seed' }, 400);
+  }
+  if (!isValidKey(mode, key)) {
+    return json({ error: 'key 格式不合法' }, 400);
+  }
+  if (deviceId !== null && !isValidDeviceId(deviceId)) {
+    return json({ error: 'deviceId 格式不合法' }, 400);
+  }
+
+  const entries = await readLeaderboard(env, mode, key);
+  const my = deviceId
+    ? rankInfo(entries, deviceId)
+    : { myRank: null, myPercentile: null, total: entries.length };
+  // 只下发公开字段，绝不包含 deviceId（避免把去重标识暴露成可被滥用的读写钥匙）。
+  const publicEntries = entries.slice(0, TOP_N).map(({ deviceId: _deviceId, ...rest }) => ({
+    ...rest,
+    name: normalizeName(rest.name),
+  }));
+
+  return json({
+    mode,
+    key,
+    entries: publicEntries,
+    myRank: my.myRank,
+    myPercentile: my.myPercentile,
+    total: my.total,
+  });
+}
+
+async function handleRequest(request, env) {
+  const url = new URL(request.url);
+  const path = url.pathname.replace(/\/+$/, '');
+  const method = request.method.toUpperCase();
+
+  if (method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: corsHeaders(request, env) });
+  }
+
+  if (method === 'POST' && path === '/api/score') {
+    return handleScore(request, env);
+  }
+  if (method === 'GET' && path === '/api/leaderboard') {
+    return handleLeaderboard(request, env);
+  }
+  return json({ error: 'Not Found' }, 404);
+}
+
+export default {
+  async fetch(request, env) {
+    try {
+      const response = await handleRequest(request, env);
+      const headers = new Headers(response.headers);
+      for (const [name, value] of Object.entries(corsHeaders(request, env))) {
+        headers.set(name, value);
+      }
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+      });
+    } catch (error) {
+      console.error('life-simulator-api error', error);
+      return json({ error: 'Internal Server Error' }, 500);
+    }
+  },
+};
