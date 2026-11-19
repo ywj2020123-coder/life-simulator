@@ -8,7 +8,7 @@ import { GATE_HASH, GATE_KEY } from '../config';
  */
 
 /** 极老内核兜底（无 crypto.subtle 时）：UTF-8 → Base64 常量比对 */
-const FALLBACK_B64 = '6ZqP6aOO5pyA5biF';
+const FALLBACK_B64 = 'ODg4OA==';
 
 async function checkPassword(input: string): Promise<boolean> {
   if (typeof crypto !== 'undefined' && crypto.subtle) {
